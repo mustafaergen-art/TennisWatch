@@ -1,0 +1,118 @@
+# TennisWatch
+
+Hands-free tennis score tracking on Apple Watch — call out the score in Turkish or English while you play, and the watch updates the scoreboard.
+
+The voice path runs through xAI's realtime audio model (`grok-voice-think-fast-1.0`) over a WebSocket. Speech goes in, normalized score text comes out (e.g. `"15-0"`, `"GAME"`, `"kort değiştir"`), and a local state machine applies it to the match. The companion iOS app stores match history and shows live scores from outside tournaments.
+
+## Features
+
+- **Voice-driven scoring** — supports Turkish/English score calls, `deuce`, `advantage`, `tiebreak`, `out`, `setler X-Y`, `oyun` / `game`, etc.
+- **Apple Watch first** — score, set summary, court-side change indicator, heart rate, calories, location.
+- **Match history** — duration, points, outs, GPS court detection, transcripts.
+- **iOS companion** — past matches, live ATP/WTA/ITF scores via Sofascore-style feed.
+- **Continuous listening** — server VAD on xAI side handles speech segmentation; no manual button.
+
+## Requirements
+
+- macOS with Xcode 15+
+- Apple Watch Series 5+ (or simulator) on watchOS 10+
+- iPhone on iOS 17+ (paired with the watch)
+- An xAI API key — sign up at [console.x.ai](https://console.x.ai)
+
+## Setup
+
+### 1. Clone
+
+```bash
+git clone https://github.com/<your-handle>/TennisWatch.git
+cd TennisWatch
+open TennisWatch.xcodeproj
+```
+
+### 2. Add your xAI API key
+
+The app reads the key from the `XAI_API_KEY` environment variable at runtime. Configure each scheme separately:
+
+1. In Xcode: **Product → Scheme → Edit Scheme…**
+2. Select **Run** in the left sidebar, then the **Arguments** tab.
+3. Under **Environment Variables**, click **+** and add:
+   - **Name**: `XAI_API_KEY`
+   - **Value**: `xai-...` (your key)
+4. Repeat for both schemes: **TennisWatch** (standalone watch) and **TennisApp** (iOS + embedded watch).
+
+Scheme env vars are stored in `xcuserdata/`, which `.gitignore` excludes — your key never enters source control.
+
+> **Note:** This pattern only works for development builds. For TestFlight/App Store distribution you'll need a different secret-injection strategy (e.g. a build-time xcconfig populated by CI, or fetching an ephemeral token from your own backend per [xAI's recommendation](https://docs.x.ai/developers/model-capabilities/audio/voice-agent)).
+
+### 3. Build and run
+
+- **Watch (standalone)**: select the **TennisWatch** scheme + an Apple Watch destination, ⌘R.
+- **iOS + watch**: select the **TennisApp** scheme + an iPhone destination, ⌘R.
+
+On first launch the watch will request microphone and speech recognition permission. Grant both. Say `"15 sıfır"` or `"thirty love"` — you should see the score update within a second.
+
+## Architecture
+
+```
+[Apple Watch mic]
+   │  AVAudioEngine tap (16/48 kHz mono float32)
+   ▼
+[AudioListenerManager]              <- TennisWatch/AudioListenerManager.swift
+   │  AVAudioConverter → 24 kHz Int16 PCM
+   │  base64 chunks
+   ▼
+[xAI Realtime WebSocket]            wss://api.x.ai/v1/realtime
+   │  server_vad → response.text.delta
+   ▼
+[ScoreManager.processDictatedText]  <- TennisWatch/ScoreManager.swift
+   │  local command parsing + quickParseTurkish()
+   ▼
+[SwiftUI ContentView]
+```
+
+Key files:
+
+- `TennisWatch/AudioListenerManager.swift` — xAI WebSocket client, audio capture, format conversion.
+- `TennisWatch/ScoreManager.swift` — match state machine, undo, tiebreak, set/court tracking.
+- `TennisWatch/HeartRateManager.swift` — HealthKit + CoreLocation, court detection.
+- `TennisWatch/ContentView.swift` — watch UI.
+- `TennisApp/` — iOS app: history, live scores, share cards.
+
+## How the voice agent is prompted
+
+The xAI session is configured with instructions (in [`AudioListenerManager.swift`](TennisWatch/AudioListenerManager.swift)) that tell the model to output **one** normalized line per utterance:
+
+| User says | Model emits |
+|-----------|-------------|
+| "fifteen love" / "on beş sıfır" | `15-0` |
+| "deuce" / "kırk kırk" | `40-40` |
+| "advantage" / "avantaj" | `AD-40` |
+| "oyun" / "game" / "fifty" | `GAME` |
+| "kort değiştir" | `kort değiştir` |
+| "maç bitti" | `maç bitti` |
+| "setler 2-0" | `setler 2-0` |
+| anything else | literal transcription |
+
+`ScoreManager.processDictatedText` then maps that line to a state transition. Common Whisper-style mishearings (`kök` → `kırk`, `om beş` → `on beş`) are corrected by the model before the watch ever sees the text.
+
+## Privacy
+
+- **Microphone audio** is streamed to xAI for transcription/normalization. No audio is stored on-device or by the app developer; xAI's retention policy applies. See [xAI's privacy docs](https://x.ai/legal/privacy-policy).
+- **Match history** is stored locally on the watch and synced to iCloud via CloudKit (entitlement in `TennisWatch.entitlements`).
+- **Location** is used only to detect court boundaries / side mismatches; coordinates stay on-device.
+- **Heart rate** is read via HealthKit, never transmitted.
+
+## Contributing
+
+Issues and PRs welcome. Areas where help is especially useful:
+
+- Additional language support (the prompt currently targets Turkish + English)
+- Replacing scheme env vars with a proper ephemeral-token backend for App Store builds
+- Better tiebreak voice commands
+- Doubles support
+
+## License
+
+[MIT](LICENSE).
+
+This project is not affiliated with xAI or Anthropic.

@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+
+# Xcode user state — schemes with API keys, breakpoints, window layouts
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+
+# Build artifacts
+build/
+DerivedData/
+*.xcarchive
+*.xcresult
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+
+# CocoaPods (not used here, but ignore in case)
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Editor
+.idea/
+*.swp
+*.swo
+*~
+
+# Old archive directory present in this repo (large, regenerable)
+TennisApp 2026-03-17 03-22-00/
+
+# Local secrets — belt-and-suspenders even though we use scheme env vars
+Secrets.swift
+Secrets.plist
+*.xcconfig.local
