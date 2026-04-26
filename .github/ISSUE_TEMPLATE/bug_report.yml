@@ -1,0 +1,70 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug. What did you expect, what happened instead?
+      placeholder: |
+        I said "fifteen love" and the score updated to 30-0 instead of 15-0.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the watch app
+        2. Say "..."
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: phrase
+    attributes:
+      label: Exact phrase you said
+      description: The Turkish or English words spoken, as close to verbatim as you can recall.
+      placeholder: '"on beş sıfır"'
+
+  - type: input
+    id: watch-model
+    attributes:
+      label: Apple Watch model + watchOS version
+      placeholder: "Series 9, watchOS 11.2"
+    validations:
+      required: true
+
+  - type: input
+    id: iphone-model
+    attributes:
+      label: Paired iPhone model + iOS version
+      placeholder: "iPhone 15 Pro, iOS 18.2"
+
+  - type: input
+    id: xcode
+    attributes:
+      label: Xcode version
+      placeholder: "16.1"
+
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network condition
+      options:
+        - Wi-Fi
+        - Cellular (watch)
+        - Paired via iPhone
+        - Mixed / unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output (if visible)
+      description: Any `print` output from `AudioListenerManager` or xAI errors. Wrap in code fences.
+      render: shell

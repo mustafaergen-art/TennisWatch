@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/mustafaergen-art/TennisWatch/discussions
+    about: For questions, ideas, and general feedback, please use Discussions instead of opening an issue.

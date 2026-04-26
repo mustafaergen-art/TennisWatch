@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ios:
+    name: iOS app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: List schemes (debug)
+        run: xcodebuild -project TennisWatch.xcodeproj -list
+
+      - name: Pick latest iPhone simulator
+        id: sim
+        run: |
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+ Pro" | head -1 | sed -E 's/.*\((.*)\).*/\1/' | head -1)
+          if [ -z "$DEST" ]; then
+            DEST=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed -E 's/.*\((.*)\).*/\1/')
+          fi
+          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Using simulator UDID: $DEST"
+
+      - name: Build TennisApp (iOS + embedded watch)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project TennisWatch.xcodeproj \
+            -scheme TennisApp \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify || xcodebuild build \
+            -project TennisWatch.xcodeproj \
+            -scheme TennisApp \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+  watchos:
+    name: watchOS standalone
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick latest Apple Watch simulator
+        id: sim
+        run: |
+          DEST=$(xcrun simctl list devices available | grep -E "Apple Watch" | head -1 | sed -E 's/.*\((.*)\).*/\1/')
+          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Using simulator UDID: $DEST"
+
+      - name: Build TennisWatch (standalone watch)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project TennisWatch.xcodeproj \
+            -scheme TennisWatch \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
