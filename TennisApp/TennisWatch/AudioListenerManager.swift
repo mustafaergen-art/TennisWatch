@@ -20,15 +20,33 @@ class AudioListenerManager: ObservableObject {
     var onTranscription: ((String) -> Void)?
 
     // MARK: - xAI Configuration
-    // The xAI API key is read at runtime from the XAI_API_KEY environment
-    // variable. Set it via:
-    //   Xcode → Product → Scheme → Edit Scheme → Run → Arguments
-    //          → Environment Variables → XAI_API_KEY = xai-...
-    // Schemes with env vars live under xcuserdata/, which the repo's
-    // .gitignore excludes — the secret never enters source control.
-    // Get a key at https://console.x.ai
+    //
+    // The xAI API key is resolved at runtime from one of two sources, in order:
+    //
+    //   1. Process environment: XAI_API_KEY
+    //      Set once globally so Xcode and child processes inherit it:
+    //
+    //        launchctl setenv XAI_API_KEY xai-...
+    //
+    //      (Then quit and reopen Xcode.) No files to manage; nothing to leak.
+    //
+    //   2. Bundle resource: a `Secrets.plist` file added to the app target
+    //      with a top-level string entry under the key `XAI_API_KEY`.
+    //      The file is gitignored — keep it that way.
+    //
+    // Do NOT put the key in a *shared* Xcode scheme — those XML files live
+    // under xcshareddata/ and are committed to git. Get a key at
+    // https://console.x.ai
     static var apiKey: String {
-        ProcessInfo.processInfo.environment["XAI_API_KEY"] ?? ""
+        if let env = ProcessInfo.processInfo.environment["XAI_API_KEY"], !env.isEmpty {
+            return env
+        }
+        if let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+           let plist = NSDictionary(contentsOf: url),
+           let key = plist["XAI_API_KEY"] as? String, !key.isEmpty {
+            return key
+        }
+        return ""
     }
     static let endpoint = URL(string: "wss://api.x.ai/v1/realtime?model=grok-voice-think-fast-1.0")!
 
@@ -78,7 +96,7 @@ class AudioListenerManager: ObservableObject {
     func startListening() {
         guard !isListening else { return }
         guard !Self.apiKey.isEmpty else {
-            lastError = "XAI_API_KEY not set in scheme env"
+            lastError = "XAI_API_KEY not set (see AudioListenerManager.apiKey docs)"
             lastResult = lastError
             return
         }

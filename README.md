@@ -43,18 +43,32 @@ open TennisWatch.xcodeproj
 
 ### 2. Add your xAI API key
 
-The app reads the key from the `XAI_API_KEY` environment variable at runtime. Configure each scheme separately:
+The app resolves the key from two sources at runtime, in order. Pick the one you prefer.
 
-1. In Xcode: **Product → Scheme → Edit Scheme…**
-2. Select **Run** in the left sidebar, then the **Arguments** tab.
-3. Under **Environment Variables**, click **+** and add:
-   - **Name**: `XAI_API_KEY`
-   - **Value**: `xai-...` (your key)
-4. Repeat for both schemes: **TennisWatch** (standalone watch) and **TennisApp** (iOS + embedded watch).
+> ⚠️ **Do NOT put the key in a *shared* Xcode scheme.** Shared scheme XML lives under `TennisWatch.xcodeproj/xcshareddata/xcschemes/` and is committed to git. CI and other contributors need shared schemes, so we keep the secret out of them entirely.
 
-Scheme env vars are stored in `xcuserdata/`, which `.gitignore` excludes — your key never enters source control.
+**Option A — global launchd env var (simplest, no files):**
 
-> **Note:** This pattern only works for development builds. For TestFlight/App Store distribution you'll need a different secret-injection strategy (e.g. a build-time xcconfig populated by CI, or fetching an ephemeral token from your own backend per [xAI's recommendation](https://docs.x.ai/developers/model-capabilities/audio/voice-agent)).
+```bash
+launchctl setenv XAI_API_KEY xai-your-key-here
+```
+
+Then **quit Xcode completely and reopen it** so it inherits the variable. The key persists until reboot. To make it permanent across reboots, write a launchd plist; for casual development, re-running this command after each reboot is fine.
+
+To clear:
+
+```bash
+launchctl unsetenv XAI_API_KEY
+```
+
+**Option B — local `Secrets.plist` (gitignored):**
+
+1. In Xcode: **File → New → File from Template…** → **Property List** → name it `Secrets.plist`.
+2. Save it inside `TennisWatch/` and **check both targets** (`TennisWatch` + `TennisApp`'s embedded watch app) when prompted.
+3. Open `Secrets.plist`, add a row with **Key** = `XAI_API_KEY` (String), **Value** = your `xai-...` key.
+4. The repo's `.gitignore` already excludes `Secrets.plist`, so it stays local.
+
+For both options: ship-time builds (TestFlight / App Store) need a different strategy — see [xAI's docs](https://docs.x.ai/developers/model-capabilities/audio/voice-agent) on ephemeral tokens.
 
 ### 3. Build and run
 
