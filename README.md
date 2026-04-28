@@ -10,12 +10,9 @@ Hands-free tennis score tracking on Apple Watch — call out the score in Turkis
 
 ## Demo
 
-<!-- Drop a screenshot or short clip here. Suggested:
-     1. Take a screenshot on the watch (side button + crown).
-     2. AirDrop to Mac, save as docs/screenshot.png in the repo.
-     3. Replace the line below with: ![watch screen](docs/screenshot.png) -->
-
-_Screenshot coming soon — contributions welcome._
+<p align="center">
+  <img src="docs/screenshot.png" alt="TennisWatch on Apple Watch" width="280">
+</p>
 
 The voice path runs through xAI's realtime audio model (`grok-voice-think-fast-1.0`) over a WebSocket. Speech goes in, normalized score text comes out (e.g. `"15-0"`, `"GAME"`, `"kort değiştir"`), and a local state machine applies it to the match. The companion iOS app stores match history and shows live scores from outside tournaments.
 
